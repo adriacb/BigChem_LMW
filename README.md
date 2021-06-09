@@ -45,7 +45,7 @@ The output is a file containing the filtered molecules in SMILES format .smi.
 ### 5. rDock
 
 1. System Definition
-    * '4lr6_pharma.prm' Containing the Cavity definition, cavity restraint penalty, and ph4 restraints.
+    * `4lr6_pharma.prm` Containing the Cavity definition, cavity restraint penalty, and ph4 restraints.
     * `pharma.restr` Containing the ph4 restraints coordinates obtained from pyMDMix.
 3. Cavity Generation
     * `rbcavity -was -d -r 4lr6_pharma.prm` rDock.
