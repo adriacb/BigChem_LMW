@@ -81,3 +81,6 @@ Two strategies:
 * Perform all the computations together
    * `sbatch MMGBSA_slurm2.q`
 * If the are enough licenses we can split the molecules.
+   * `MMGBSAsplit.q` splits the sdf file into desired number of molecules.
+   * `MMGBSAprep.q` wich basically converts every split into MAE format.
+   * `MMGBSA_slurm.q` runs the MMGBSA using a SLURM array, the number of jobs running at the same time cannot be greater than the number of CPUS.
