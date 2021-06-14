@@ -1,0 +1,587 @@
+---
+title: '**VS Results (rDock)**'
+author: "Adrià C., Marina M."
+header-includes:
+   - \usepackage{booktabs}
+   - \usepackage{makecell}
+output:
+  html_document:
+    css: https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/all.css
+    self_contained: yes
+    theme: yeti
+  pdf_document:
+    toc: false
+    template: default.latex
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(stringr)
+library(readr)
+library(ggplot2)
+library(kableExtra)
+library(dplyr)
+require(knitr)
+```
+
+## rDock
+
+This is an R script used to interpret the results from rDock.
+
+```{r, echo=FALSE}
+
+
+VS_Results_path = '/home/acabello/Documents/NAS/rdock/VS_Results/'
+files <- list.files(path = VS_Results_path, pattern = "*.sd", full.names = TRUE)
+split_path <- function(x) if (dirname(x)==x) x else c(basename(x),split_path(dirname(x)))
+```
+
+## VS_FILTER
+
+--> VS_FILTER.txt
+
+```{bash eval=FALSE}
+5
+if - -3 SCORE.INTER 1.0 if - SCORE.NRUNS  3 0.0 -1.0,
+if - 2 SCORE.RESTR.PHARMA 1.0 if - SCORE.NRUNS  3 0.0 -1.0,
+if - -6 SCORE.INTER 1.0 if - SCORE.NRUNS  8 0.0 -1.0,
+if - 1 SCORE.RESTR.PHARMA 1.0 if - SCORE.NRUNS 8 0.0 -1.0,
+if - SCORE.NRUNS 15 0.0 -1.0,
+2
+- SCORE.INTER -8,
+- SCORE.RESTR.PHARMA 1,
+
+```
+
+--> VS_slurm.q
+
+```{bash eval=FALSE}
+#!/bin/bash
+
+#SBATCH -D .
+#SBATCH --output=log/rdock_2_filter.q.o
+#SBATCH --error=log/rdock_2_filter.q.e
+#SBATCH --job-name=rdock_2_filter
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --array=1-700%30
+
+module load rdock
+#-------------------------------------------------------------------------
+indir=/alexandria1/DB/BigChem_FRAGMENTS/SPLIT_DB/
+outdir=VS_Results
+
+num=$(( ${SLURM_ARRAY_TASK_ID} ))
+curr_file=`ls $indir*.sd | awk -v line=$num '{if (NR == line) print $0}'`
+file_name=`awk 'END{ var=FILENAME; n=split (var,a,/\//); print a[n]}' $curr_file`
+#-------------------------------------------------------------------------
+
+rbdock -i $curr_file -o $outdir/docked_filter_2_$file_name -r 4lr6.prm -p dock.prm -t VS_FILTER.txt > 
+\$outdir/log/rdock_2_${SLURM_ARRAY_TASK_ID}_filter.log
+
+```
+
+
+
+# How many molecules do we have for each file?
+
+```{bash eval=FALSE}
+grep -c '$$$$' ./VS_Results/*.sd > howmany.txt
+```
+
+
+```{r eval = FALSE, echo=FALSE}
+first50 <- data.frame(matrix(,nrow=700, ncol=2))
+colnames(first50) <- c("File_name", "Fragments")
+
+row = 1
+for (i in files){
+  file <- readLines(i)
+  howmany = 0
+  for (line in file){
+    if (line == "$$$$"){
+      howmany = howmany + 1
+    }
+  }
+  #print(split_path(i)[1])
+  #print(howmany)
+  first50[row, "File_name"] <- split_path(i)[1]
+  first50[row, "Fragments"] <- howmany
+  row = row + 1
+}
+```
+
+```{r}
+
+howmany <- read_delim("/home/acabello/Documents/NAS/rdock/howmany.txt", 
+    ":", escape_double = FALSE, trim_ws = TRUE,col_names = FALSE)
+summary(howmany)
+```
+
+```{r}
+11122*(700)
+sum(howmany$X2)
+```
+
+
+# How many molecules remains after filtering?
+
+--> filter_VS.q
+
+```{r eval=FALSE}
+#!/bin/bash
+
+#SBATCH --job-name=test_cluster
+#SBATCH -D .
+#SBATCH --time=01:00:00
+#SBATCH --output=log/test_cluster-%a.q.o
+#SBATCH --error=log/test_cluster-%a.q.e
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+
+module load rdock
+
+OUTFILE='FILTERED_SCORE_INTER.sd'
+
+for file in $PWD/VS_Results/*.sd
+do
+#FILTER DIFERENT MOLECULES
+$RBT_ROOT/bin/sdsort -n -fSCORE -s $file |$RBT_ROOT/bin/sdfilter -f'$SCORE.RESTR < 1.0' |$RBT_ROOT/bin/sdfilter -f'$SCORE.INTER < -5.0'
+\|$RBT_ROOT/bin/sdfilter -f'$_COUNT == 1'>> tmp.sd
+done
+
+#ORDER MOLECULES BY SCORE INTER
+$RBT_ROOT/bin/sdsort -n -fSCORE.INTER tmp.sd |$RBT_ROOT/bin/sdfilter -f'$_COUNT == 1' >> $OUTFILE
+
+#echo Compressing \${sdout}...
+#rm tmp.sd
+#gzip -9vf \${sdout}
+
+```
+
+
+```{bash eval=FALSE}
+grep -c '$$$$' ./NAS/acabello/rdock/FILTERED_SCORE_INTER.sd
+```
+
+418.321 molecules.
+
+
+# Distribution of the intermolecular scores.
+
+```{r, echo=FALSE}
+INTERMOLECULAR <- read_table2("/home/acabello/Documents/NAS/rdock/700_sortedINTER.rep")
+summary(INTERMOLECULAR)
+inter<-ggplot(data=INTERMOLECULAR, aes(x=INTER))+
+  geom_histogram(aes(label=..count.., fill=(..count..)/sum(..count..)), binwidth=1)+scale_fill_continuous(type = "viridis")+
+    stat_bin(binwidth=1, geom="text", size=2,
+           aes(label=..count..), vjust= -0.8)+xlim(-20,-2)+
+  ylab("Counts")+
+  theme_classic()+ ggtitle("INTER SCORES")
+inter
+
+norm_INTER <- read_table2("/home/acabello/Documents/NAS/rdock/700_INTERnorm.rep")
+
+pnorminter<-ggplot(data=norm_INTER, aes(x=SCORE.INTER.norm))+
+  geom_histogram(aes(label=..count.., fill=(..count..)/sum(..count..)), binwidth=0.1)+scale_fill_continuous(type = "viridis")+
+    stat_bin(binwidth=0.1, geom="text", size=2.5,
+           aes(label=..count..), vjust= -0.6)+
+  ylab("Counts")+
+  theme_classic()+ ggtitle("NORM INTER SCORES")
+pnorminter
+
+```
+
+```{r, echo=FALSE}
+restr<-ggplot(data=INTERMOLECULAR, aes(x=RESTR))+
+  geom_histogram(aes(label=..count.., fill=(..count..)/sum(..count..)), binwidth=0.1)+scale_fill_continuous(type = "viridis")+
+    stat_bin(binwidth=0.1, geom="text", size=2,
+           aes(label=..count..), vjust= -0.8)+
+  ylab("Counts")+
+  theme_classic()+ ggtitle("RESTR SCORES")
+restr
+```
+
+```{r}
+library(dplyr)
+FILTER <- filter(INTERMOLECULAR, INTER <= -12 & RESTR <= 0.7)
+dim(FILTER)
+```
+```{r}
+(dim(FILTER)[1]/700)*5800
+```
+
+Molecules that will be used for clustering.
+
+\clearpage
+\newpage
+
+## Using Score.Inter -12 and Score.Restr 0.7
+
+```{r, echo=FALSE}
+INTERMOLECULAR1207 <- read_table2("/home/acabello/Documents/NAS/rdock/FILTERED_1207.rep")
+
+restr<-ggplot(data=INTERMOLECULAR1207, aes(x=RESTR))+
+  geom_histogram(aes(label=..count.., fill=(..count..)/sum(..count..)), binwidth=0.1)+scale_fill_continuous(type = "viridis")+
+    stat_bin(binwidth=0.1, geom="text", size=2,
+           aes(label=..count..), vjust= -0.8)+
+  ylab("Counts")+
+  theme_classic()+ ggtitle("RESTR SCORES")
+restr
+
+inter<-ggplot(data=INTERMOLECULAR1207, aes(x=INTER))+
+  geom_histogram(aes(label=..count.., fill=(..count..)/sum(..count..)), binwidth=1)+scale_fill_continuous(type = "viridis")+
+    stat_bin(binwidth=1, geom="text", size=2,
+           aes(label=..count..), vjust= -0.8)+
+  ylab("Counts")+
+  theme_classic()+ ggtitle("INTER SCORES")
+inter
+
+norm_INTER <- read_table2("/home/acabello/Documents/NAS/rdock/FILTERED_1207_norm.rep")
+
+pnorminter<-ggplot(data=norm_INTER, aes(x=SCORE.INTER.norm))+
+  geom_histogram(aes(label=..count.., fill=(..count..)/sum(..count..)), binwidth=0.1)+scale_fill_continuous(type = "viridis")+
+    stat_bin(binwidth=0.1, geom="text", size=2.5,
+           aes(label=..count..), vjust= -0.6)+
+  ylab("Counts")+
+  theme_classic()+ ggtitle("NORM INTER SCORES")
+pnorminter
+```
+
+
+
+# Comparision Database, ChEMBL, and PDB
+
+
+```{r, echo=FALSE}
+Unique_Fragments <- 4123967
+
+ChemBL <- read_table2("/home/acabello/Desktop/Unique_ChEMBL_report.tbl")
+PDB <- read_table2("/home/acabello/Desktop/HB_dock_unique_report.tbl")
+
+summary(PDB)
+interCHEMBL<-ggplot(data=ChemBL, aes(x=INTER))+
+  geom_histogram(aes(label=..count.., fill=(..count..)/sum(..count..)), binwidth=1)+scale_fill_continuous(type = "viridis")+
+    stat_bin(binwidth=1, geom="text", size=2,
+           aes(label=..count..), vjust= -0.8)+xlim(-20,-2)+
+  ylab("Counts")+
+  theme_classic()+ ggtitle("INTER SCORES ChEMBL")
+interCHEMBL
+interPDB<-ggplot(data=PDB, aes(x=INTER))+
+  geom_histogram(aes(label=..count.., fill=(..count..)/sum(..count..)), binwidth=1)+scale_fill_continuous(type = "viridis")+
+    stat_bin(binwidth=1, geom="text", size=2,
+           aes(label=..count..), vjust= -0.8)+xlim(-21,-2)+
+  ylab("Counts")+
+  theme_classic()+ ggtitle("INTER SCORES PDB")
+interPDB
+summary(ChemBL)
+```
+```{r}
+interCHEMBL
+interPDB<-ggplot(data=ChemBL, aes(x=RESTR))+
+  geom_histogram(aes(label=..count.., fill=(..count..)/sum(..count..)), binwidth=1)+scale_fill_continuous(type = "viridis")+
+    stat_bin(binwidth=1, geom="text", size=2,
+           aes(label=..count..), vjust= -0.8)+
+  ylab("Counts")+
+  theme_classic()+ ggtitle("RESTR SCORES ChEMBL")
+interPDB
+summary(ChemBL)
+```
+
+
+```{r}
+per20ChemBLG <- ChemBL %>%
+  filter(INTER < -20)
+
+per20ChemBL <- ChemBL %>%
+  filter(INTER >= -20,
+         INTER < -18)
+
+per18ChemBL <- ChemBL %>%
+  filter(INTER >= -18,
+         INTER < -16)
+
+per16ChemBL <- ChemBL %>%
+  filter(INTER >= -16,
+         INTER < -14)
+
+per14ChemBL <- ChemBL %>%
+  filter(INTER >= -14,
+         INTER < -12)
+
+
+per12ChemBL <- ChemBL %>%
+  filter(INTER >= -12,
+         INTER < -10)
+
+
+per10ChemBL <- ChemBL %>%
+  filter(INTER >= -10,
+         INTER < -8)
+
+
+per8ChemBL <- ChemBL %>%
+  filter(INTER >= -8)
+
+
+per20PDBG <- PDB %>%
+  filter(INTER < -20)
+
+per20PDB <- PDB %>%
+  filter(INTER >= -20,
+         INTER < -18)
+
+per18PDB <- PDB %>%
+  filter(INTER >= -18,
+         INTER < -16)
+
+per16PDB <- PDB %>%
+  filter(INTER >= -16,
+         INTER < -14)
+
+per14PDB <- PDB %>%
+  filter(INTER >= -14,
+         INTER < -12)
+
+per12PDB <- PDB %>%
+  filter(INTER >= -12,
+         INTER < -10)
+
+per10PDB <- PDB %>%
+  filter(INTER >= -10,
+         INTER < -8)
+
+per8PDB <- PDB %>%
+  filter(INTER >= -8)
+
+
+per20G <- INTERMOLECULAR %>%
+  filter(INTER < -20)
+
+per20 <- INTERMOLECULAR %>%
+  filter(INTER >= -20,
+         INTER < -18)
+
+per18 <- INTERMOLECULAR %>%
+  filter(INTER >= -18,
+         INTER < -16)
+
+per16 <- INTERMOLECULAR %>%
+  filter(INTER >= -16,
+         INTER < -14)
+
+per14 <- INTERMOLECULAR %>%
+  filter(INTER >= -14,
+         INTER < -12)
+
+per12 <- INTERMOLECULAR %>%
+  filter(INTER >= -12,
+         INTER < -10)
+
+per10 <- INTERMOLECULAR %>%
+  filter(INTER >= -10,
+         INTER < -8)
+
+per8 <- INTERMOLECULAR %>%
+  filter(INTER >= -8)
+
+```
+
+\clearpage
+\newpage
+
+
+```{r}
+cumPer <- c(dim(per20G)[1], dim(per20)[1],dim(per18)[1],dim(per16)[1],dim(per14)[1],dim(per12)[1],dim(per10)[1],dim(per8)[1],(Unique_Fragments-dim(INTERMOLECULAR)[1]))
+cumPerChEMBL <- c(dim(per20ChemBLG)[1], dim(per20ChemBL)[1],dim(per18ChemBL)[1],dim(per16ChemBL)[1],dim(per14ChemBL)[1],dim(per12ChemBL)[1],dim(per10ChemBL)[1],dim(per8ChemBL)[1],0)
+cumPerPDB <- c(dim(per20PDBG)[1], dim(per20PDB)[1],dim(per18PDB)[1],dim(per16PDB)[1],dim(per14PDB)[1],dim(per12PDB)[1],dim(per10PDB)[1],dim(per8PDB)[1],0)
+
+
+
+text_tbl <- data.frame(cutoff = c("< -20","[-20,-18)","[-18,-16)","[-16,-14)","[-14,-12)","[-12,-10)","[-10,-8)", ">= -8", "Filtered (HTVS)"),
+  chem = round((100*cumsum(cumPerChEMBL)/sum(cumPerChEMBL)),1),
+  pdbb = round((100*cumsum(cumPerPDB)/sum(cumPerPDB)),1),
+  database = round((100*cumsum(cumPer)/sum(cumPer)),1)
+)
+
+text_tbl %>%
+  mutate_all(linebreak) %>%
+  kable(col.names = linebreak(c("Cutoff (Score.Inter)","% Actives (ChEMBL)","% Actives (PDB)","% Database")))%>%
+  kable_classic(full_width = F, html_font = "Cambria")
+
+```
+
+
+```{r}
+per20G1 <- INTERMOLECULAR1207 %>%
+  filter(INTER < -20)
+
+per201 <- INTERMOLECULAR1207 %>%
+  filter(INTER >= -20,
+         INTER < -18)
+
+per181 <- INTERMOLECULAR1207 %>%
+  filter(INTER >= -18,
+         INTER < -16)
+
+per161 <- INTERMOLECULAR1207 %>%
+  filter(INTER >= -16,
+         INTER < -14)
+
+per141 <- INTERMOLECULAR1207 %>%
+  filter(INTER >= -14,
+         INTER < -12)
+
+per121 <- INTERMOLECULAR1207 %>%
+  filter(INTER >= -12,
+         INTER < -10)
+
+per101 <- INTERMOLECULAR1207 %>%
+  filter(INTER >= -10,
+         INTER < -8)
+
+per81 <- INTERMOLECULAR1207 %>%
+  filter(INTER >= -8)
+
+cumPer2 <- c(dim(per20G1)[1], dim(per201)[1],dim(per181)[1],dim(per161)[1],dim(per141)[1],dim(per121)[1],dim(per101)[1],dim(per81)[1], 
+             (Unique_Fragments-dim(INTERMOLECULAR1207)[1]))
+
+cumPerChEMBL <- c(dim(per20ChemBLG)[1], dim(per20ChemBL)[1],dim(per18ChemBL)[1],dim(per16ChemBL)[1],dim(per14ChemBL)[1],dim(per12ChemBL)[1],dim(per10ChemBL)[1],dim(per8ChemBL)[1],
+                  0)
+
+cumPerPDB <- c(dim(per20PDBG)[1], dim(per20PDB)[1],dim(per18PDB)[1],dim(per16PDB)[1],dim(per14PDB)[1],dim(per12PDB)[1],dim(per10PDB)[1],dim(per8PDB)[1],
+               0)
+
+
+
+text_tbl <- data.frame(cutoff = c("< -20","[-20,-18)","[-18,-16)","[-16,-14)","[-14,-12)","[-12,-10)","[-10,-8)", ">= -8", "Filtered (HTVS)"),
+  chem = round((100*cumsum(cumPerChEMBL)/sum(cumPerChEMBL)),1),
+  pdbb = round((100*cumsum(cumPerPDB)/sum(cumPerPDB)),1),
+  database = round((100*cumsum(cumPer2)/sum(cumPer2)),1)
+)
+
+text_tbl %>%
+  mutate_all(linebreak) %>%
+  kable(col.names = linebreak(c("Cutoff (Score.Inter)","% Actives (ChEMBL)","% Actives (PDB)","% Database")))%>%
+  kable_classic(full_width = F, html_font = "Cambria")
+```
+
+
+
+
+# FINAL RESULTS VS
+
+```{bash eval=FALSE}
+grep -c '$$$$' FILTERED_SCORE_INTER_12.sd
+```
+
+1.542.571 molecules.
+
+## Score distribution
+
+```{r}
+INTERMOLECULAR_FINAL <- read_table2("/home/acabello/Desktop/FILTERED_SCORE_INTER_12_REPORT.tbl")
+dim(INTERMOLECULAR_FINAL)
+summary(INTERMOLECULAR_FINAL)
+```
+
+
+```{r}
+restrF<-ggplot(data=INTERMOLECULAR_FINAL, aes(x=RESTR))+
+  geom_histogram(aes(label=..count.., fill=(..count..)/sum(..count..)), binwidth=0.1)+scale_fill_continuous(type = "viridis")+
+    stat_bin(binwidth=0.1, geom="text", size=2,
+           aes(label=..count..), vjust= -0.8)+
+  ylab("Counts")+
+  theme_classic()+ ggtitle("RESTR SCORES")
+restrF
+
+interF<-ggplot(data=INTERMOLECULAR_FINAL, aes(x=INTER))+
+  geom_histogram(aes(label=..count.., fill=(..count..)/sum(..count..)), binwidth=1)+scale_fill_continuous(type = "viridis")+
+    stat_bin(binwidth=1, geom="text", size=2,
+           aes(label=..count..), vjust= -0.8)+xlim(-20,-2)+
+  ylab("Counts")+
+  theme_classic()+ ggtitle("INTER SCORES")
+interF
+
+```
+
+## Summary table
+```{r}
+CHEMBL1163125[CHEMBL1163125$`Molecule ChEMBL ID` == "CHEMBL112",]
+#summary(INTERMOLECULAR_FINAL)
+```
+
+```{r}
+per20GF <- INTERMOLECULAR_FINAL %>%
+  filter(INTER < -20)
+
+per20F <- INTERMOLECULAR_FINAL %>%
+  filter(INTER >= -20,
+         INTER < -18)
+
+per18F <- INTERMOLECULAR_FINAL %>%
+  filter(INTER >= -18,
+         INTER < -16)
+
+per16F <- INTERMOLECULAR_FINAL %>%
+  filter(INTER >= -16,
+         INTER < -14)import os
+from rdkit import RDConfig
+
+per14F <- INTERMOLECULAR_FINAL %>%
+  filter(INTER >= -14,
+         INTER < -12)
+
+per12F <- INTERMOLECULAR_FINAL %>%
+  filter(INTER >= -12,
+         INTER < -10)
+
+per10F <- INTERMOLECULAR_FINAL %>%
+  filter(INTER >= -10,
+         INTER < -8)
+
+per8F <- INTERMOLECULAR_FINAL %>%
+  filter(INTER >= -8)
+
+cumPerF <- c(dim(per20GF)[1], dim(per20F)[1],dim(per18F)[1],dim(per16F)[1],dim(per14F)[1],dim(per12F)[1],dim(per10F)[1],dim(per8F)[1], 
+             (Unique_Fragments-dim(INTERMOLECULAR_FINAL)[1]) )
+
+
+cumPerChEMBL <- c(dim(per20ChemBLG)[1], dim(per20ChemBL)[1],dim(per18ChemBL)[1],dim(per16ChemBL)[1],dim(per14ChemBL)[1],dim(per12ChemBL)[1],dim(per10ChemBL)[1],dim(per8ChemBL)[1],
+                  0)
+
+cumPerPDB <- c(dim(per20PDBG)[1], dim(per20PDB)[1],dim(per18PDB)[1],dim(per16PDB)[1],dim(per14PDB)[1],dim(per12PDB)[1],dim(per10PDB)[1],dim(per8PDB)[1],
+               0)
+dim(per14F)[1]/(Unique_Fragments-dim(INTERMOLECULAR_FINAL)[1])
+
+
+text_tbl <- data.frame(cutoff = c("< -20","[-20,-18)","[-18,-16)","[-16,-14)","[-14,-12)","[-12,-10)","[-10,-8)", ">= -8", "Filtered (HTVS)"),
+  chem = round((100*cumsum(cumPerChEMBL)/sum(cumPerChEMBL)),1),
+  pdbb = round((100*cumsum(cumPerPDB)/sum(cumPerPDB)),1),
+  database = round((100*cumsum(cumPerF)/sum(cumPerF)),1)
+)
+
+text_tbl %>%
+  mutate_all(linebreak) %>%
+  kable(col.names = linebreak(c("Cutoff (Score.Inter)","% Actives (ChEMBL)","% Actives (PDB)","% Database")))%>%
+  kable_classic(full_width = F, html_font = "Cambria")
+```
+```{r}
+
+print(paste("There are",dim(INTERMOLECULAR_FINAL)[1], "molecules as a final result of rDock."))
+print(paste("rDock has filtered",(Unique_Fragments-dim(INTERMOLECULAR_FINAL)[1]),"molecules."))
+print(paste("The sum of the filtered", (Unique_Fragments-dim(INTERMOLECULAR_FINAL)[1]), "and the results from rDock",dim(INTERMOLECULAR_FINAL)[1],"is  ",(Unique_Fragments-dim(INTERMOLECULAR_FINAL)[1])+(dim(INTERMOLECULAR_FINAL)[1])))
+print(paste("The SUM of each one of the intervals used in the table is",sum(c(dim(per20GF)[1], dim(per20F)[1],dim(per18F)[1],dim(per16F)[1],dim(per14F)[1],dim(per12F)[1],dim(per10F)[1],dim(per8F)[1]))))
+print(paste("If we sum the result to the ones that have not been screened", sum(c(dim(per20GF)[1], dim(per20F)[1],dim(per18F)[1],dim(per16F)[1],dim(per14F)[1],dim(per12F)[1],dim(per10F)[1],dim(per8F)[1])) + (Unique_Fragments-dim(INTERMOLECULAR_FINAL)[1])))
+
+dim(per20GF)[1]/Unique_Fragments
+dim(per20GF)[1]/dim(INTERMOLECULAR_FINAL)[1]
+100-((Unique_Fragments-dim(INTERMOLECULAR_FINAL)[1])*100/Unique_Fragments)
+```
+
+```{r}
+prova <- c(dim(per20GF)[1], dim(per20F)[1],dim(per18F)[1],dim(per16F)[1],dim(per14F)[1],dim(per12F)[1],dim(per10F)[1],dim(per8F)[1])
+sum(prova)/Unique_Fragments
+```
+

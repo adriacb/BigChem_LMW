@@ -23,21 +23,20 @@ The output is a file containing the filtered molecules in SMILES format .smi.
     * `python rotBonds.py` Rotatable Bonds.
 2. Histogram
     * `python FragmentsStats.py` Distributions of fragments.
-    * `Rscript histoProp.rmd` Histograms
 3. Data visualization
     * `python DrawGrid.py` Visualization of molecules.
 
 ### 2. Structure and Library preparation
 
 1. Structure preparation with MOE.
-        
+
     * `MOE | File | Open | $MOE/4lr6.pdb.gz` Load 4LR6 into MOE.
     * `MOE | Window | Sequence Editor` open the editor.
     * `MOE | Compute | Prepare | Structure preparation` prepare structure.
     * `Structure Preparation | Popup | Clear Selection` and `Structure Preparation | Correct`.
-            
+
 2. Ligand preparation with Corina and ChemAxon.
-        
+
     * `bash ligprep.sh`
 
 ### 3. pyMDMix
@@ -64,7 +63,7 @@ The output is a file containing the filtered molecules in SMILES format .smi.
 We used SLURM to perform the computations.
 
 1. Add hydrogens to the output sd file from rDock.
- 
+
      * `obabel -isdf -----.sdf -osdf -h -O ligands_docking_H.sdf`
 
 2. The MMGBSA requires a MAE format containing the RECEPTOR, and the LIGANDS in this specific order.
@@ -81,5 +80,4 @@ Two strategies:
 
 * Perform all the computations together
    * `sbatch MMGBSA_slurm2.q`
-* If the are enough licenses we can split the molecules. 
-
+* If the are enough licenses we can split the molecules.

@@ -1,0 +1,224 @@
+---
+title: "ChEMBL"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(readr)
+library(ggplot2)
+library(kableExtra)
+library(dplyr)
+require(knitr)
+```
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE, results='hide'}
+CHEMBL1163125 <- read_delim("/home/acabello/Documents/Talia/Desktop/rDOCK/ChemBL/ChemBL_results/CHEMBL1163125.csv", 
+    ";", escape_double = FALSE, trim_ws = TRUE)
+ChemBL <- read_table2("/home/acabello/Desktop/Unique_ChEMBL_report.tbl")
+```
+
+```{r, echo=FALSE}
+head(CHEMBL1163125)
+```
+```{r}
+dim(CHEMBL1163125)
+table(CHEMBL1163125[,9])
+```
+
+```{r}
+Unique_ChEMBL <- CHEMBL1163125[!duplicated(CHEMBL1163125[,1]),]
+dim(Unique_ChEMBL)
+table(Unique_ChEMBL[,9])
+```
+We have 308 unique ligand ID's in total having least one: Kd, Ki, and IC50.
+```{r}
+summary(Unique_ChEMBL[,11])
+```
+# IC50
+
+```{r}
+Kd <- Unique_ChEMBL%>%
+  filter(Unique_ChEMBL[,9]=='Kd', Unique_ChEMBL[,9]!='IC50')
+microM100G <- Unique_ChEMBL%>%
+  filter(Unique_ChEMBL[,11] >= 100000, Unique_ChEMBL[,9]=='IC50')
+print(paste("IC50 >= 100 microM:",dim(microM100G)[1]))
+microM100 <- Unique_ChEMBL%>%
+  filter(Unique_ChEMBL[,11] < 100000, Unique_ChEMBL[,9]=='IC50')
+print(paste("IC50 < 100 microM:",dim(microM100)[1]))
+microM10 <- Unique_ChEMBL%>%
+  filter(Unique_ChEMBL[,11] < 10000, Unique_ChEMBL[,9]=='IC50')
+print(paste("IC50 < 10 microM:",dim(microM10)[1]))
+microM1 <- Unique_ChEMBL%>%
+  filter(Unique_ChEMBL[,11] < 1000, Unique_ChEMBL[,9]=='IC50')
+print(paste("IC50 < 1 microM:",dim(microM1)[1]))
+nanoM100 <- Unique_ChEMBL%>%
+  filter(Unique_ChEMBL[,11] < 100, Unique_ChEMBL[,9]=='IC50')
+print(paste("IC50 < 100 nanoM:",dim(nanoM100)[1]))
+```
+```{r}
+
+```
+
+
+```{r}
+MERGED_ChEMBL <- merge(ChemBL, Unique_ChEMBL, by.x="_TITLE1", by.y = "Molecule ChEMBL ID")
+
+NAMERGED_ChEMBL<-MERGED_ChEMBL[is.na(MERGED_ChEMBL[,17]),]
+
+KD_CH<-merge(ChemBL, Kd, by.x="_TITLE1", by.y = "Molecule ChEMBL ID")
+
+#MERGED_ChEMBL[,c(1,4,15,17)]
+MERGED_ChEMBL100G <- merge(ChemBL, microM100G, by.x="_TITLE1", by.y = "Molecule ChEMBL ID")
+MERGED_ChEMBL100 <- merge(ChemBL, microM100, by.x="_TITLE1", by.y = "Molecule ChEMBL ID")
+MERGED_ChEMBL10 <- merge(ChemBL, microM10, by.x="_TITLE1", by.y = "Molecule ChEMBL ID")
+MERGED_ChEMBL1 <- merge(ChemBL, microM1, by.x="_TITLE1", by.y = "Molecule ChEMBL ID")
+MERGED_ChEMB100 <- merge(ChemBL, nanoM100, by.x="_TITLE1", by.y = "Molecule ChEMBL ID")
+
+print(paste("Best poses of ChEMBL from rDOCK:",dim(MERGED_ChEMBL)[1]))
+
+print(paste("IC50 = NA:",dim(NAMERGED_ChEMBL)[1]))
+
+print(paste("Having Kd:",dim(KD_CH)[1]))
+
+print(paste("IC50 >= 100 microM:",dim(MERGED_ChEMBL100G)[1]))
+
+print(paste("IC50 < 100 microM:",dim(MERGED_ChEMBL100)[1]))
+
+print(paste("IC50 < 10 microM:",dim(MERGED_ChEMBL10)[1]))
+
+print(paste("IC50 < 1 microM:",dim(MERGED_ChEMBL1)[1]))
+
+print(paste("IC50 < 100 nanoM:",dim(MERGED_ChEMB100)[1]))
+
+```
+```{r}
+MERGED_ChEMBL[MERGED_ChEMBL$`_TITLE1` == 'CHEMBL112',]  
+```
+
+
+```{r}
+table(MERGED_ChEMBL[,15])
+```
+```{r}
+interCHEMBLIC50<-ggplot(data=MERGED_ChEMBL, aes(x=INTER))+
+  geom_histogram(aes(label=..count.., fill=(..count..)/sum(..count..)), binwidth=1)+scale_fill_continuous(type = "viridis")+
+    stat_bin(binwidth=1, geom="text", size=2,
+           aes(label=..count..), vjust= -0.8)+xlim(-20,-2)+
+  ylab("Counts")+
+  theme_classic()+ ggtitle("INTER SCORES ChEMBL IC50")
+interCHEMBLIC50
+```
+
+```{r}
+interCHEMBLIC50100<-ggplot(data=MERGED_ChEMBL100, aes(x=INTER))+
+  geom_histogram(aes(label=..count.., fill=(..count..)/sum(..count..)), binwidth=1)+scale_fill_continuous(type = "viridis")+
+    stat_bin(binwidth=1, geom="text", size=2,
+           aes(label=..count..), vjust= -0.8)+xlim(-20,-2)+
+  ylab("Counts")+
+  theme_classic()+ ggtitle("INTER SCORES ChEMBL IC50 < 100.000nM")
+interCHEMBLIC50100
+```
+
+```{r}
+interCHEMBLIC50100$data
+IDS_interCHEMBLIC50100<- interCHEMBLIC50100$data[,c(1,28,29)]
+write.csv(IDS_interCHEMBLIC50100,"/home/acabello/Desktop/IDS_interCHEMBLIC50100.csv", row.names = FALSE)
+```
+
+
+```{r}
+interCHEMBLIC5010<-ggplot(data=MERGED_ChEMBL10, aes(x=INTER))+
+  geom_histogram(aes(label=..count.., fill=(..count..)/sum(..count..)), binwidth=1)+scale_fill_continuous(type = "viridis")+
+    stat_bin(binwidth=1, geom="text", size=2,
+           aes(label=..count..), vjust= -0.8)+xlim(-20,-2)+
+  ylab("Counts")+
+  theme_classic()+ ggtitle("INTER SCORES ChEMBL IC50 < 10.000nM")
+interCHEMBLIC5010
+```
+
+```{r}
+interCHEMBLIC5010$data
+IDS_interCHEMBLIC5010<- interCHEMBLIC5010$data[,c(1,28,29)]
+write.csv(IDS_interCHEMBLIC5010,"/home/acabello/Desktop/IDS_interCHEMBLIC5010.csv", row.names = FALSE)
+```
+
+
+```{r}
+interCHEMBLIC501<-ggplot(data=MERGED_ChEMBL1, aes(x=INTER))+
+  geom_histogram(aes(label=..count.., fill=(..count..)/sum(..count..)), binwidth=1)+scale_fill_continuous(type = "viridis")+
+    stat_bin(binwidth=1, geom="text", size=2,
+           aes(label=..count..), vjust= -0.8)+xlim(-20,-2)+
+  ylab("Counts")+
+  theme_classic()+ ggtitle("INTER SCORES ChEMBL IC50 < 1.000nM")
+interCHEMBLIC501
+```
+
+```{r}
+interCHEMBLIC501$data
+IDS_interCHEMBLIC501<- interCHEMBLIC501$data[,c(1,28,29)]
+write.csv(IDS_interCHEMBLIC501,"/home/acabello/Desktop/IDS_interCHEMBLIC501.csv", row.names = FALSE)
+```
+
+
+
+```{r}
+interCHEMBLIC50<-ggplot(data=MERGED_ChEMB100, aes(x=INTER))+
+  geom_histogram(aes(label=..count.., fill=(..count..)/sum(..count..)), binwidth=1)+scale_fill_continuous(type = "viridis")+
+    stat_bin(binwidth=1, geom="text", size=2,
+           aes(label=..count..), vjust= -0.8)+xlim(-20,-2)+
+  ylab("Counts")+
+  theme_classic()+ ggtitle("INTER SCORES ChEMBL IC50 < 100nM")
+interCHEMBLIC50
+```
+
+
+
+# Kd
+
+
+```{r}
+Kd_ChEMBL <- Unique_ChEMBL%>%
+  filter(Unique_ChEMBL[,9]=='Kd')
+summary(Kd_ChEMBL[,11])
+dim(Kd_ChEMBL[,11])[1]
+```
+
+```{r}
+Kd_CHEMBL <- Kd_ChEMBL[!is.na(Kd_ChEMBL[,11]),]
+Kd_ChEMBL$`Standard Units`<-as.numeric(Kd_ChEMBL$`Standard Value`)
+class(Kd_ChEMBL$`Standard Value`)
+Kd_ChEMBL$`Molecule ChEMBL ID`<-as.factor(Kd_ChEMBL$`Molecule ChEMBL ID`)
+CHEMBLKD<-ggplot(data=Kd_ChEMBL)+
+  geom_point(aes(x=`Molecule ChEMBL ID`,y=`Standard Value`))+
+  theme(axis.text.x  = element_text(angle=90))+
+  ggtitle("Kd values ChEMBL")
+CHEMBLKD
+```
+
+
+```{r}
+MERGED_ChEMBL_KD <- merge(ChemBL, Kd_ChEMBL, by.x="_TITLE1", by.y = "Molecule ChEMBL ID")
+```
+
+```{r}
+interCHEMBLKD<-ggplot(data=MERGED_ChEMBL_KD, aes(x=INTER))+
+  geom_histogram(aes(label=..count.., fill=(..count..)/sum(..count..)))+scale_fill_continuous(type = "viridis")+
+    stat_bin(geom="text", size=2,
+           aes(label=..count..), vjust= -0.8)+xlim(-20,-2)+
+  ylab("Counts")+
+  theme_classic()+ ggtitle("INTER SCORES ChEMBL Kd")
+interCHEMBLKD
+```
+```{r}
+interCHEMBLKD$data
+IDS_interCHEMBLKD<- interCHEMBLKD$data[,c(1,28,29)]
+write.csv(IDS_interCHEMBLKD,"/home/acabello/Desktop/IDS_interCHEMBLKD.csv", row.names = FALSE)
+```
+
+
+
+

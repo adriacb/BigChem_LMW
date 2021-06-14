@@ -1,0 +1,12 @@
+Filtering:
+- Python 3.7.9 
+- RDKIT (1_73 rdBase)
+- Datetime 
+Plots:
+- Matplotlib (3.3.4)
+- Seaborn (0.11.0)
+- Datetime 
+- Pandas (1.2.1)
+- Progressbar (3.53.1)
+- Python 3.7.9 
+- RDKIT (1_73 rdBase)

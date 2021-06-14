@@ -1,0 +1,11 @@
+- R version (4.0.4)
+- BiocManager (1.30.10)
+- ggplot2 (3.3.3)
+- rJava (0.9.13)
+- rcdklibs (2.3)
+- rcdk (3.5.0)
+- Rcpi (1.26.0)
+- readr (1.4.0)
+- foreach (1.5.1)
+- doParallel (1.0.16)
+- dplyr

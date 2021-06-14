@@ -1,0 +1,325 @@
+---
+title: "MMGBSA"
+author: "adria"
+date: "3/5/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(readr)
+library(ggplot2)
+require(dplyr) 
+
+
+All_results_2k <- dir("./", recursive=TRUE, full.names=TRUE, pattern="\\.csv$") %>%
+  lapply(read_csv) %>% # read each CSV file
+  bind_rows() # join the rows of each CSV
+
+dim(All_results_2k)
+head(All_results_2k)
+```
+
+```{r}
+summary(All_results_2k[,c(2,9,10,22,32,40,52,62,69)])
+```
+
+
+# Using REAL_MIN
+
+```{r}
+p<-ggplot(data=All_results_2k)+
+  geom_histogram(alpha = 0.5, position="dodge", aes(x=r_psp_MMGBSA_dG_Bind,fill=..count../sum(..count..)), binwidth = 1)+
+  stat_bin(aes(x=r_psp_MMGBSA_dG_Bind, y=..count.., label=ifelse(..count..>0,..count..,"")), geom="text", vjust=-0.5, binwidth = 1)+
+  scale_fill_viridis_c()+
+  theme_classic()+
+  ggtitle(expression(paste(Delta,"G = ",E[complex]," - ",E[ligand]," - ",E[receptor]," (minimized)")))+
+  xlab(expression(paste(Delta,G[bind])))+
+  ylab("Counts")
+p
+ppC<-ggplot(data=All_results_2k)+
+  geom_histogram(aes(x=r_psp_Complex_Energy,fill=..count../sum(..count..)),position='identity',fill="blue", alpha = 0.2)+
+  stat_bin(aes(x=r_psp_Complex_Energy, y=..count.., label=ifelse(..count..>0,..count..,"")), geom="text", vjust=-0.5)+
+  scale_fill_viridis_c()+
+  ggtitle(expression(paste(E[complex]," (minimized)")))+
+  theme_classic()+
+  xlab(expression(paste(E[complex])))
+ppC
+ppL<-ggplot(data=All_results_2k)+
+  geom_histogram(aes(x=r_psp_Ligand_Energy,fill=..count../sum(..count..)),position='identity',fill="red", alpha = 0.2)+
+  ggtitle(expression(paste(E[ligand]," (minimized)")))+
+  stat_bin(aes(x=r_psp_Ligand_Energy, y=..count.., label=ifelse(..count..>0,..count..,"")), geom="text", vjust=-0.5)+
+  scale_fill_viridis_c()+
+  theme_classic()+
+  xlab(expression(paste(E[ligand])))
+ppL
+
+```
+
+```{r}
+
+p2<-ggplot(data=All_results_2k)+
+  geom_histogram(alpha = 0.5, position="dodge", aes(x=`r_psp_MMGBSA_dG_Bind(NS)`,fill=..count../sum(..count..)), binwidth = 1)+
+  stat_bin(aes(x=`r_psp_MMGBSA_dG_Bind(NS)`, y=..count.., label=ifelse(..count..>0,..count..,"")), geom="text", vjust=-0.5, binwidth = 1)+
+  scale_fill_viridis_c()+
+  theme_classic()+
+  ggtitle(expression(paste(Delta,"G(NS)")))+
+  xlab(expression(paste(Delta,G[bind])))+
+  ylab("Counts")
+p2
+```
+
+
+```{r}
+p3<-ggplot(data=All_results_2k)+
+  geom_histogram(alpha = 0.5, position="dodge", aes(x=r_psp_MMGBSA_dG_Bind_Solv_GB,fill=..count../sum(..count..)), binwidth = 1)+
+  stat_bin(aes(x=r_psp_MMGBSA_dG_Bind_Solv_GB, y=..count.., label=ifelse(..count..>0,..count..,"")), geom="text", vjust=-0.5, binwidth = 1)+
+  scale_fill_viridis_c()+
+  theme_classic()+
+  ggtitle(expression(paste(Delta,G[solv (GB)])))+
+  xlab(expression(paste(Delta,G[solv (GB)])))+
+  ylab("Counts")
+p3
+
+```
+
+
+```{r}
+p4<-ggplot(data=All_results_2k)+
+  geom_histogram(alpha = 0.5, position="dodge", aes(x=`r_psp_MMGBSA_dG_Bind(NS)_Solv_GB`,fill=..count../sum(..count..)), binwidth = 1)+
+  stat_bin(aes(x=`r_psp_MMGBSA_dG_Bind(NS)_Solv_GB`, y=..count.., label=ifelse(..count..>0,..count..,"")), geom="text", vjust=-0.5, binwidth = 1)+
+  scale_fill_viridis_c()+
+  theme_classic()+
+  ggtitle(expression(paste(Delta,G[solv (NS-GB)])))+
+  xlab(expression(paste(Delta,G[solv (NS-GB)])))+
+  ylab("Counts")
+p4
+
+```
+
+
+
+# ChEMBL
+
+```{r}
+X100uM_ChEMBL <- read_csv("../100uM_ChEMBL.csv")
+mmgbsa_output_out <-read_csv("../MMGBSA/MMGBSA_out_REAL_MIN.csv")
+Actives_ChEMBL<-merge(mmgbsa_output_out, X100uM_ChEMBL, by.x = "title", by.y="ChEMBL_ID")
+dim(Actives_ChEMBL)
+```
+
+
+# Compare ChEMBL and 2K rep 
+
+```{r}
+library(gghighlight)
+All_results_2k$cat <- "2K"
+mmgbsa_output_out$cat <- "ChEMBL"
+
+WHOLESET <- rbind(All_results_2k, mmgbsa_output_out)
+colnames(All_results_2k)
+colnames(Actives_ChEMBL)
+Actives_ChEMBL<- Actives_ChEMBL[,1:84]
+Actives_ChEMBL$cat <- "ChEMBL IC50 <= 100uM"
+WHOLESET_onlyActivesChembl<-rbind(All_results_2k, mmgbsa_output_out,Actives_ChEMBL)
+
+hist <- ggplot(data=WHOLESET_onlyActivesChembl)+
+  geom_histogram(alpha = 0.5, position="identity", aes(x = r_psp_MMGBSA_dG_Bind, fill=cat), binwidth=1)+
+  theme_classic()+
+  scale_fill_viridis_d()+
+  ggtitle(expression(paste("Comparison ChEMBL and 2K most representatives (",Delta,"G)")))+
+  xlab(expression(paste(Delta,G[bind])))+
+  ylab("Counts")
+hist
+
+```
+
+
+```{r}
+#`r_psp_MMGBSA_dG_Bind(NS)`
+his_dGNS <- ggplot(data=WHOLESET_onlyActivesChembl)+
+  geom_histogram(alpha = 0.5, position="identity", aes(x = `r_psp_MMGBSA_dG_Bind(NS)`,fill=cat), binwidth=1)+
+  theme_classic()+
+  scale_fill_viridis_d()+
+  ggtitle(expression(paste("Comparison ChEMBL and 2K most representatives (",Delta,"G NS)")))+
+  xlab(expression(paste(Delta,G[bind]," NS")))+
+  ylab("Counts")
+his_dGNS
+```
+
+
+```{r}
+his_dGsolvNS <- ggplot(data=WHOLESET_onlyActivesChembl)+
+  geom_histogram(alpha = 0.5, position="identity", aes(x = r_psp_MMGBSA_dG_Bind_Solv_GB,fill=cat), binwidth=1)+
+  theme_classic()+
+  scale_fill_viridis_d()+
+  ggtitle(expression(paste("Comparison ChEMBL and 2K most representatives (",Delta,"G Solv)")))+
+  xlab(expression(paste(Delta,G[solv (GB)])))+
+  ylab("Counts")
+his_dGsolvNS
+
+```
+
+
+
+
+```{r}
+his_dGsolvNS <- ggplot(data=WHOLESET_onlyActivesChembl)+
+  geom_histogram(alpha = 0.5, position="identity", aes(x = `r_psp_MMGBSA_dG_Bind(NS)_Solv_GB`,fill=cat), binwidth=1)+
+  theme_classic()+
+  scale_fill_viridis_d()+
+  ggtitle(expression(paste("Comparison ChEMBL and 2K most representatives (",Delta,"G Solv (NS))")))+
+  xlab(expression(paste(Delta,G[solv (GB-NS)])))+
+  ylab("Counts")
+his_dGsolvNS
+
+```
+
+# delta G and solvation
+
+```{r}
+
+rel <- ggplot(data=WHOLESET_onlyActivesChembl)+
+  geom_point(aes(x=r_psp_MMGBSA_dG_Bind, y = r_psp_MMGBSA_dG_Bind_Solv_GB,color=cat))+
+  theme_classic()+
+  scale_fill_viridis_d()+
+  ggtitle(expression(paste("Comparison ChEMBL and 2K most representatives (",Delta,G[bind]," vs ", Delta,G[Solv],")")))+
+  ylab(expression(paste(Delta,G[solv (GB)])))+
+  xlab(expression(paste(Delta,G[bind])))
+rel
+
+
+```
+
+
+
+```{r}
+
+relNS <- ggplot(data=WHOLESET_onlyActivesChembl)+
+  geom_point(aes(x=`r_psp_MMGBSA_dG_Bind(NS)`, y = `r_psp_MMGBSA_dG_Bind(NS)_Solv_GB`,color=cat))+
+  theme_classic()+
+  scale_fill_viridis_d()+
+  ggtitle(expression(paste("Comparison ChEMBL and 2K most representatives (",Delta,G[bind], " vs ",Delta, G[solv]," (NS))")))+
+  ylab(expression(paste(Delta,G[solv (GB-NS)])))+
+  xlab(expression(paste(Delta,G[bind (NS)])))
+relNS
+
+
+```
+
+```{r}
+filtered <- filter(All_results_2k, r_psp_MMGBSA_dG_Bind <= -29, r_psp_MMGBSA_dG_Bind_Solv_GB <= 14) 
+dim(filtered)
+dim(filtered)[1]/800
+1-dim(filtered)[1]/800
+10000*0.38
+```
+```{r}
+
+dGdSol<-WHOLESET_onlyActivesChembl[WHOLESET_onlyActivesChembl$cat == 'ChEMBL', ]
+dGdSol2<-WHOLESET_onlyActivesChembl[WHOLESET_onlyActivesChembl$cat == 'ChEMBL IC50 <= 100uM', ]
+dGdSol3<-WHOLESET_onlyActivesChembl[WHOLESET_onlyActivesChembl$cat == '2K', ]
+summary(dGdSol$r_psp_MMGBSA_dG_Bind)
+summary(dGdSol$`r_psp_MMGBSA_dG_Bind_Solv_GB`)
+summary(dGdSol2$r_psp_MMGBSA_dG_Bind)
+summary(dGdSol2$`r_psp_MMGBSA_dG_Bind_Solv_GB`)
+summary(dGdSol3$r_psp_MMGBSA_dG_Bind)
+summary(dGdSol3$`r_psp_MMGBSA_dG_Bind_Solv_GB`)
+```
+```{r}
+summary(dGdSol$`r_psp_MMGBSA_dG_Bind(NS)`)
+summary(dGdSol$`r_psp_MMGBSA_dG_Bind(NS)_Solv_GB`)
+summary(dGdSol2$`r_psp_MMGBSA_dG_Bind(NS)`)
+summary(dGdSol2$`r_psp_MMGBSA_dG_Bind(NS)_Solv_GB`)
+summary(dGdSol3$`r_psp_MMGBSA_dG_Bind(NS)`)
+summary(dGdSol3$`r_psp_MMGBSA_dG_Bind(NS)_Solv_GB`)
+```
+
+```{r}
+
+ChEMBL_dG <- WHOLESET_onlyActivesChembl[WHOLESET_onlyActivesChembl$cat == 'ChEMBL',c('title','r_psp_MMGBSA_dG_Bind', 'r_psp_MMGBSA_dG_Bind_Solv_GB','r_psp_MMGBSA_dG_Bind(NS)','r_psp_MMGBSA_dG_Bind(NS)_Solv_GB')]
+ChEMBL_dG[order(ChEMBL_dG$r_psp_MMGBSA_dG_Bind_Solv_GB, decreasing = TRUE),]
+
+
+```
+
+```{r}
+rep2K_dG <- WHOLESET_onlyActivesChembl[WHOLESET_onlyActivesChembl$cat == '2K',c('title','r_psp_MMGBSA_dG_Bind', 'r_psp_MMGBSA_dG_Bind_Solv_GB','r_psp_MMGBSA_dG_Bind(NS)','r_psp_MMGBSA_dG_Bind(NS)_Solv_GB')]
+rep2K_dG[order(rep2K_dG$r_psp_MMGBSA_dG_Bind_Solv_GB, decreasing = TRUE),]
+```
+
+```{r}
+ChEMBL_ic_dG <- WHOLESET_onlyActivesChembl[WHOLESET_onlyActivesChembl$cat == 'ChEMBL IC50 <= 100uM',c('title','r_psp_MMGBSA_dG_Bind', 'r_psp_MMGBSA_dG_Bind_Solv_GB','r_psp_MMGBSA_dG_Bind(NS)','r_psp_MMGBSA_dG_Bind(NS)_Solv_GB')]
+ChEMBL_ic_dG[order(ChEMBL_ic_dG$r_psp_MMGBSA_dG_Bind_Solv_GB, decreasing = TRUE),]
+```
+
+
+
+# Relationship between rDock scores and Free Energy of binding
+
+
+```{r}
+# if (!requireNamespace("BiocManager", quietly=TRUE))
+#     install.packages("BiocManager")
+# BiocManager::install("ChemmineR")
+library("ChemmineR")
+sdfset <- read.SDFset('/home/acabello/Desktop/MMGBSA/rep304.sdf')
+```
+
+```{r}
+ sdfset[[1]] # Returns summarized content of one SDF
+```
+```{r}
+#datablock(sdfset)
+ids <- sdfid(sdfset)
+```
+```{r}
+ blockmatrix <- datablock2ma(datablocklist=datablock(sdfset)) # Converts data block to matrix 
+ numchar <- splitNumChar(blockmatrix=blockmatrix) # Splits to numeric and character matrix 
+numchar$numMA[1,4]
+
+rdock_scores <- data.frame(matrix(nrow=304, ncol=2)) 
+
+for (i in 1:304){
+  rdock_scores$X1[i] <- ids[i]
+  rdock_scores$X2[i] <- numchar$numMA[i,4]
+}
+
+colnames(rdock_scores)<-c('ID','INTER')
+```
+
+```{r}
+dim(filtered)
+
+library(readr)
+sdreport304 <- read_table2("~/Desktop/MMGBSA/sdreport304.tbl")
+
+dG_Vs_rdock<- merge(filtered[,c('title','r_psp_MMGBSA_dG_Bind','r_psp_MMGBSA_dG_Bind_Solv_GB')], sdreport304, by.x = 'title', by.y = '_TITLE1')
+dG_Vs_rdock
+```
+
+```{r}
+rel_dg_rdock <- ggplot(data=dG_Vs_rdock)+
+  geom_point(aes(x=r_psp_MMGBSA_dG_Bind, y = INTER, color=INTER ))+
+  theme_classic()+
+  ggtitle(expression(paste("Comparison INTER scores and ",Delta,G[bind])))+
+  ylab(expression(paste(S[Inter])))+
+  xlab(expression(paste(Delta,G[bind])))
+rel_dg_rdock
+
+```
+
+```{r}
+rel_dg_rdock <- ggplot(data=dG_Vs_rdock)+
+  geom_point(aes(x=r_psp_MMGBSA_dG_Bind_Solv_GB, y = INTER, color=INTER ))+
+  theme_classic()+
+  ggtitle(expression(paste("Comparison INTER scores and ",Delta,G[Solv])))+
+  ylab(expression(paste(S[Inter])))+
+  xlab(expression(paste(Delta,G[Solv])))
+rel_dg_rdock
+```
+
