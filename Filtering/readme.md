@@ -2,9 +2,9 @@
 Depending if the DB is compressed or not:
 
 1. Not Compressed (SMILES format):
-    * `python filterAtoms.py`
+    * `python filter_HA_R.py`
 2. Compressed (ZIP format):
-    * `python filterAtomsG.py`
+    * `python filter_HA_R_zip.py`
 
 The output is a file containing the filtered molecules in SMILES format .smi.
 
