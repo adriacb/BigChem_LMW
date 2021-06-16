@@ -15,8 +15,22 @@ Drug discovery and development are very expensive and time-consuming for the pha
 - MOE: https://www.chemcomp.com/Products.htm
 - PyMol: https://pymol.org/
 
-## Python and R requirements 
+## Python and R requirements
 - Python_Requirements.txt
 - R_requirements.txt
 
 ## Project Tree
+
+
+/BigChem_LMW
+├── Clustering
+├── Docking_HTS
+│   ├── Scripts
+│   └── SLURM
+├── Filtering
+│   └── Data_analysis
+├── MD_HotSpots
+├── MM-GBSA
+│   ├── Scripts
+│   └── SLURM
+└── Preparation
