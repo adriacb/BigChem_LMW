@@ -8,7 +8,7 @@ infile=$2
 
 if [ $split ]  && [ $infile ]; then
 	echo "File "$2 "splitted in $split parts.";
-else 
+else
 	echo "split_MMGBSA.sh [number of splits] [sdf input file]";
 	exit 0;
 fi
@@ -22,7 +22,7 @@ $cmd
 else
 	echo "Cannot find rDock module";
 	exit 0;
-fi 
+fi
 
 
 
@@ -32,10 +32,8 @@ do
 if [[ -f "tmp${i}.sd" ]]; then
 	mkdir tmp_${i};
 	mv tmp${i}.sd ./tmp_${i};
-	
+
 else
 	break
 fi
 done;
-
-
