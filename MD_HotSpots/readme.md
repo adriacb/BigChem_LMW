@@ -1,4 +1,4 @@
-MD with solvent mixures | Identification of HotSpots | pyMDMix
+### 3. MD with solvent mixures | Identification of HotSpots | pyMDMix
 
 1. Preparation
    * PyMol: clean structure (remove ligand and H20)
