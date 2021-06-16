@@ -32,6 +32,6 @@
       * isosurface ETA_CT, ETA_CT_DGO, -1
       * color by probe
     
-### 5. rDock
+### 5. Docking & HTS
 ### 6. MM-GBSA
 
