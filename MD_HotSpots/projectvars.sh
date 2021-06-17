@@ -102,4 +102,4 @@ mdmix create project -n $PName -f $PWD/PTP_${PName}.cfg
 
 # Create MD files
 cd $MD
-mdmix queue write -n QueueName
+mdmix queue write -n $QueueName

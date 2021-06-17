@@ -19,18 +19,3 @@ Drug discovery and development are very expensive and time-consuming for the pha
 - Python_Requirements.txt
 - R_requirements.txt
 
-## Project Tree
-
-
-/BigChem_LMW
-├── Clustering
-├── Docking_HTS
-│   ├── Scripts
-│   └── SLURM
-├── Filtering
-│   └── Data_analysis
-├── MD_HotSpots
-├── MM-GBSA
-│   ├── Scripts
-│   └── SLURM
-└── Preparation
