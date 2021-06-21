@@ -14,9 +14,9 @@ Drug discovery and development are very expensive and time-consuming for the pha
 4. Clustering (waiting for final results)
 5. Discrimination
     1. MM/GBSA
-    2. DUck    
-6. Fragment growing
-7. Experimental validation
+    2. DUck (not implemented yet)    
+6. Fragment growing (not implemented yet)
+7. Experimental validation 
 
 ## Project dependencies
 
