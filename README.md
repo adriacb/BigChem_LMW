@@ -13,8 +13,8 @@ Drug discovery and development are very expensive and time-consuming for the pha
 3. High-Throughput screening
 4. Clustering (waiting for final results)
 5. Discrimination
-  1. MM/GBSA
-  2. DUck    
+    1. MM/GBSA
+    2. DUck    
 6. Fragment growing
 7. Experimental validation
 
