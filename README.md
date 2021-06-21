@@ -6,6 +6,18 @@ Drug discovery and development are very expensive and time-consuming for the pha
 
 **Methods:** We have developed a computational pipeline to transform how VS is carried out, enabling efficient and high-quality exploration of these new and vast chemical collections. We first perform an exhaustive exploration of the fragment-like chemical space using a hierarchical strategy based on the successive pharmacophore-guided molecular docking, unsupervised clustering techniques, MM-GBSA, and Dynamic Undocking. Then, the selected fragments are grown into larger molecules using a fragment evolution platform developed in the lab. In this way, we only need to explore the regions of the chemical space that show the most potential for our target, instead of an exhaustive exploration of the whole space.
 
+## The Pipeline
+
+1. Construction of the fragment library
+2. "Hot spots" identification
+3. High-Throughput screening
+4. Clustering (waiting for final results)
+5. Discrimination
+  1. MM/GBSA
+  2. DUck    
+6. Fragment growing
+7. Experimental validation
+
 ## Project dependencies
 
 - pyMDMix: http://mdmix.sourceforge.net/
@@ -14,6 +26,9 @@ Drug discovery and development are very expensive and time-consuming for the pha
 - Schrodinger Prime: https://schrodinger.com/
 - MOE: https://www.chemcomp.com/Products.htm
 - PyMol: https://pymol.org/
+- Corina
+- JChem - ChemAxon
+- OpenBabel
 
 ## Python and R requirements
 - Python_Requirements.txt
