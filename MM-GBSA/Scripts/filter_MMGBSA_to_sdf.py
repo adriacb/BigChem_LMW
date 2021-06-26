@@ -41,9 +41,9 @@ def plotHist(filtered):
 
 def main():
     # Read MMGBSA output
-    # columns = ['ID(s)', 'r_psp_MMGBSA_dG_Bind', 'r_psp_MMGBSA_dG_Bind_Solv_GB','r_psp_MMGBSA_dG_Bind(NS)','r_psp_MMGBSA_dG_Bind(NS)_Solv_GB']
+    #columns = ['ID(s)', 'r_psp_MMGBSA_dG_Bind', 'r_psp_MMGBSA_dG_Bind_Solv_GB','r_psp_MMGBSA_dG_Bind(NS)','r_psp_MMGBSA_dG_Bind(NS)_Solv_GB']
     mmgbsa = pd.read_csv(args.mmgbsa)
-    #print(mmgbsa.info())
+    print(mmgbsa.info())
 
     # We filter those dG_Bind values having a value less than [args.cutoff]
     filtered = mmgbsa.loc[mmgbsa['r_psp_MMGBSA_dG_Bind'] <= float(args.cutoff)]
@@ -59,12 +59,16 @@ def main():
     suppl = PandasTools.LoadSDF(args.in_sdf)
     #print(suppl.info())
 
-    # Check whether the Ids from the MMGBSA file exist in the sdf file and merge both datasets
-    merge = suppl.loc[suppl['ID'].isin(filtered['title'])]
-    print(merge.info())
+    # Check whether the Ids from the MMGBSA file exist in the sdf file and find the union between the datasets
+    union = suppl.loc[suppl['ID'].isin(filtered['title'])]
+    print(union.info())
 
-    # Write the results into sdf file
-    PandasTools.WriteSDF(merge,args.out_sdf, properties=list(merge.columns))
+    #Now merge results from MM/GBSA
+    merged = pd.merge(union, filtered[['r_psp_MMGBSA_dG_Bind', 'r_psp_MMGBSA_dG_Bind_Solv_GB','r_psp_MMGBSA_dG_Bind(NS)','r_psp_MMGBSA_dG_Bind(NS)_Solv_GB']].astype(object), left_index=True, right_index=True)
+    print(merged.info())
+
+    # Write the results into sdf file adding the MM/GBSA information
+    PandasTools.WriteSDF(merged, args.out_sdf, properties=list(merged.columns))
 
 
 if __name__ == '__main__':
